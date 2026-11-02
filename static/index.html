@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конструктор Векторных Иллюстраций</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="logo-badge">🎨</div>
+      <div>
+        <div class="brand-title">Векторный Конструктор</div>
+        <div class="brand-subtitle">Автоматическая сборка и реколор иллюстраций</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Size Toggle (L / S) -->
+      <div class="control-group">
+        <span class="control-label">Размер элементов:</span>
+        <div class="size-pill-group">
+          <button id="btn_size_l" class="size-pill active" onclick="setSizeMode('L')">L (Детальный)</button>
+          <button id="btn_size_s" class="size-pill" onclick="setSizeMode('S')">S (Компактный)</button>
+        </div>
+      </div>
+
+      <!-- Canvas Aspect / Format -->
+      <div class="control-group">
+        <span class="control-label">Формат:</span>
+        <select id="canvas_format_select" class="control-select" onchange="onFormatChange(this.value)">
+          <option value="1000x1000" selected>1:1 Квадрат (1000 × 1000)</option>
+          <option value="1200x675">16:9 Баннер (1200 × 675)</option>
+          <option value="1200x900">4:3 Горизонт (1200 × 900)</option>
+          <option value="1080x1920">9:16 Сториз (1080 × 1920)</option>
+          <option value="custom">Пользовательский...</option>
+        </select>
+      </div>
+
+      <!-- Background Style -->
+      <div class="control-group">
+        <span class="control-label">Фон:</span>
+        <select id="background_type_select" class="control-select" onchange="onBackgroundTypeChange(this.value)">
+          <option value="pattern" selected>Паттерн палитры</option>
+          <option value="solid">Заливка цветом</option>
+          <option value="white">Белый</option>
+          <option value="transparent">Прозрачный</option>
+        </select>
+      </div>
+
+      <!-- Clear Canvas -->
+      <button class="btn btn-secondary btn-sm" onclick="clearCanvas()" title="Очистить холст">
+        🧹 Очистить
+      </button>
+
+      <!-- Copy SVG -->
+      <button class="btn btn-secondary" onclick="copySvgCode()" title="Скопировать SVG код в буфер для вставки в Figma">
+        📋 Скопировать SVG
+      </button>
+
+      <!-- Download SVG -->
+      <button class="btn btn-primary" onclick="downloadSvg()" title="Скачать чистый векторный SVG">
+        📥 Скачать SVG
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace: Left Library | Center Canvas | Right Control Suite -->
+  <main class="app-workspace">
+
+    <!-- Left Sidebar: Component Library -->
+    <aside class="sidebar-library">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <span class="sidebar-title">Библиотека компонентов</span>
+          <span id="lib_count_badge" class="library-badge-s">10 элементов</span>
+        </div>
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="lib_search_input" class="search-input" placeholder="Поиск по названию или тегу..." oninput="filterLibrary()">
+        </div>
+      </div>
+
+      <!-- Component Cards Grid -->
+      <div id="library_items_container" class="library-items-list">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary" style="width:100%" onclick="openUploadModal()">
+          📤 Загрузить свой SVG
+        </button>
+      </div>
+    </aside>
+
+    <!-- Center Canvas Viewport -->
+    <section id="canvas_viewport" class="canvas-viewport" onclick="onViewportClick(event)">
+      <div id="canvas_container" class="canvas-container" style="width: 650px; height: 650px;">
+        <svg id="composition_svg_root" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+          <!-- Live rendered composite SVG content -->
+        </svg>
+
+        <!-- Visual Selection Box -->
+        <div id="selection_box" class="canvas-selection-box">
+          <div class="selection-handle handle-se" id="handle_resize" title="Тяните для масштабирования с сохранением пропорций"></div>
+          <div class="selection-handle handle-rotate" id="handle_rotate" title="Тяните для поворота"></div>
+
+          <!-- Floating Quickbar -->
+          <div class="floating-quickbar">
+            <button class="quickbar-btn" onclick="toggleSelectedItemRole()" title="Переключить: Главный (цветной) ↔ Фоновый (монохром)">
+              🎨 <span id="quickbar_role_text">Фоновый</span>
+            </button>
+            <button class="quickbar-btn" onclick="rotateSelectedItem(15)" title="Повернуть на 15°">
+              🔄 +15°
+            </button>
+            <button class="quickbar-btn" onclick="duplicateSelectedItem()" title="Дублировать объект">
+              📄 Дублировать
+            </button>
+            <button class="quickbar-btn" onclick="moveSelectedItemLayer(1)" title="Поднять слой выше">
+              🔼 Выше
+            </button>
+            <button class="quickbar-btn" onclick="moveSelectedItemLayer(-1)" title="Опустить слой ниже">
+              🔽 Ниже
+            </button>
+            <button class="quickbar-btn" style="color:#f87171" onclick="deleteSelectedItem()" title="Удалить объект">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Sidebar: Tabs & Control Suite -->
+    <aside class="sidebar-controls">
+      <!-- Tabs Header -->
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('metaphor')">✨ Метафора</button>
+        <button class="tab-btn" onclick="switchTab('components')">🧩 Сборка</button>
+        <button class="tab-btn" onclick="switchTab('palette')">🎨 Палитра</button>
+        <button class="tab-btn" onclick="switchTab('inspector')">📐 Объект</button>
+      </div>
+
+      <!-- Tab 1: Scenario 1 - Metaphor / Headline -->
+      <div id="tab_metaphor" class="tab-content active">
+        <div class="section-box">
+          <div class="section-box-title">
+            <span>Сценарий 1: Авто-сборка по метафоре</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.4;">
+            Задайте метафору или заголовок. Система сама выберет подходящие главные и фоновые объекты и соберёт гармоничную композицию.
+          </p>
+          <textarea id="metaphor_input" class="textarea-prompt" placeholder="Например: Финансовая подушка безопасности, Учеба и экзамены, Творческий прорыв, Музыка для концентрации..."></textarea>
+          
+          <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-top:4px;">Популярные темы:</div>
+          <div class="chips-row">
+            <span class="chip" onclick="setMetaphorPrompt('Финансовая подушка и рост сбережений')">💰 Финансы</span>
+            <span class="chip" onclick="setMetaphorPrompt('Учеба, экзамены и чтение книг')">📚 Образование</span>
+            <span class="chip" onclick="setMetaphorPrompt('Творческое озарение и новые идеи')">💡 Идеи</span>
+            <span class="chip" onclick="setMetaphorPrompt('Офисные дела и подписание контрактов')">💼 Бизнес</span>
+            <span class="chip" onclick="setMetaphorPrompt('Музыка в наушниках для фокусировки')">🎧 Музыка</span>
+            <span class="chip" onclick="setMetaphorPrompt('Мобильное приложение и коммуникация')">📱 Связь</span>
+            <span class="chip" onclick="setMetaphorPrompt('Сложная задача и поиск решения')">🧩 Логика</span>
+            <span class="chip" onclick="setMetaphorPrompt('Праздничный букет и теплое поздравление')">🌸 Подарок</span>
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <select id="metaphor_preset_select" class="control-select" style="flex:1; background:var(--bg-app); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+              <option value="auto" selected>Композиция: Авто-баланс</option>
+              <option value="hero_accent">Центр + Акценты</option>
+              <option value="triangular">Треугольный баланс</option>
+              <option value="dynamic_diagonal">Диагональная динамика</option>
+              <option value="editorial_split">Журнальная (со свободным местом)</option>
+              <option value="still_life">Натюрморт</option>
+            </select>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" style="flex:1" onclick="runMetaphorComposition()">
+              ✨ Собрать композицию
+            </button>
+            <button class="btn btn-secondary" onclick="shuffleComposition()" title="Перемешать расстановку">
+              🎲 Вариант
+            </button>
+          </div>
+        </div>
+
+        <!-- Reasoning Box -->
+        <div id="metaphor_reasoning_box" class="reasoning-box" style="display:none;">
+          <div style="font-weight:700; margin-bottom:4px;">Логика метафоры:</div>
+          <div id="metaphor_reasoning_text"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Scenario 2 - Direct Component Selection -->
+      <div id="tab_components" class="tab-content">
+        <div class="section-box">
+          <div class="section-box-title">
+            <span>Сценарий 2: Сборка из компонентов</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.4;">
+            Выберите или введите названия нужных компонентов. Программа сама скомпонует их на холсте с сохранением пропорций.
+          </p>
+
+          <div style="font-size:11px; font-weight:600; color:var(--text-muted);">Нажмите, чтобы добавить или исключить:</div>
+          <div id="scenario2_chips_container" class="chips-row">
+            <!-- Rendered via JS -->
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <select id="components_preset_select" class="control-select" style="flex:1; background:var(--bg-app); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+              <option value="auto" selected>Композиция: Авто</option>
+              <option value="hero_accent">Центр + Акценты</option>
+              <option value="triangular">Треугольный баланс</option>
+              <option value="dynamic_diagonal">Динамическая диагональ</option>
+              <option value="editorial_split">Журнальная</option>
+              <option value="still_life">Натюрморт</option>
+            </select>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" style="flex:1" onclick="runComponentsComposition()">
+              🧩 Скомпоновать выбранные
+            </button>
+            <button class="btn btn-secondary" onclick="shuffleComposition()" title="Перемешать текущую сцену">
+              🎲 Перемешать
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Palettes & Automatic Recoloring -->
+      <div id="tab_palette" class="tab-content">
+        <div class="section-box">
+          <div class="section-box-title">
+            <span>Цветовые палитры и реколор</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.4;">
+            Автоматическая перекраска всей композиции (как в плагине Figma). Цвета объектов и фона строго соответствуют выбранной схеме.
+          </p>
+
+          <div id="palettes_container" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Rendered via JS -->
+          </div>
+
+          <button class="btn btn-secondary" style="width:100%; margin-top:8px;" onclick="openPaletteModal()">
+            📤 Загрузить файл палитры SVG
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Selected Item Inspector -->
+      <div id="tab_inspector" class="tab-content">
+        <div id="inspector_empty_notice" class="section-box" style="text-align:center; padding:30px 14px;">
+          <div style="font-size:24px; margin-bottom:8px;">👆</div>
+          <div style="font-size:13px; font-weight:600; color:#ffffff;">Элемент не выбран</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+            Кликните на любой объект на холсте, чтобы настроить его положение, масштаб, угол или роль.
+          </div>
+        </div>
+
+        <div id="inspector_controls" class="section-box" style="display:none;">
+          <div class="section-box-title">
+            <span id="inspector_item_name">Объект</span>
+            <span id="inspector_item_badge" class="library-badge-s">Главный</span>
+          </div>
+
+          <!-- State Role Toggle: Main / Background -->
+          <div class="inspector-row">
+            <span style="font-weight:600;">Состояние:</span>
+            <button id="inspector_role_toggle" class="btn btn-secondary btn-sm" onclick="toggleSelectedItemRole()">
+              🎨 Главный (Цветной)
+            </button>
+          </div>
+
+          <!-- Position X & Y -->
+          <div class="inspector-row">
+            <span>Позиция X:</span>
+            <input type="number" id="inspector_x" class="inspector-input" onchange="updateItemProp('x', this.value)">
+          </div>
+          <div class="inspector-row">
+            <span>Позиция Y:</span>
+            <input type="number" id="inspector_y" class="inspector-input" onchange="updateItemProp('y', this.value)">
+          </div>
+
+          <!-- Uniform Scale (Proportions Strictly Preserved) -->
+          <div class="inspector-row">
+            <span>Масштаб:</span>
+            <input type="range" id="inspector_scale_range" class="inspector-slider" min="0.1" max="2.0" step="0.02" oninput="updateItemProp('scale', this.value)">
+            <input type="number" id="inspector_scale" class="inspector-input" min="0.1" max="2.0" step="0.05" onchange="updateItemProp('scale', this.value)">
+          </div>
+          <div style="font-size:10px; color:var(--text-dim); text-align:right; margin-top:-6px;">
+            🔒 Пропорции строго заблокированы (1:1)
+          </div>
+
+          <!-- Rotation Angle -->
+          <div class="inspector-row">
+            <span>Поворот:</span>
+            <input type="range" id="inspector_rot_range" class="inspector-slider" min="-180" max="180" step="1" oninput="updateItemProp('rotation', this.value)">
+            <input type="number" id="inspector_rot" class="inspector-input" min="-180" max="180" onchange="updateItemProp('rotation', this.value)">
+          </div>
+
+          <!-- Layer Order Controls -->
+          <div style="font-size:12px; font-weight:600; margin-top:4px;">Порядок слоёв:</div>
+          <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="moveSelectedItemLayer(999)">⏫ На передний план</button>
+            <button class="btn btn-secondary btn-sm" onclick="moveSelectedItemLayer(1)">🔼 На один выше</button>
+            <button class="btn btn-secondary btn-sm" onclick="moveSelectedItemLayer(-1)">🔽 На один ниже</button>
+            <button class="btn btn-secondary btn-sm" onclick="moveSelectedItemLayer(-999)">⏬ На задний план</button>
+          </div>
+
+          <!-- Duplicate and Delete -->
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn btn-secondary btn-sm" style="flex:1" onclick="duplicateSelectedItem()">
+              📄 Дублировать
+            </button>
+            <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteSelectedItem()">
+              🗑️ Удалить
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Upload Component Modal -->
+  <div id="modal_upload_comp" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Загрузка SVG в библиотеку</span>
+        <button class="modal-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <div class="file-dropzone" onclick="document.getElementById('upload_main_file_input').click()">
+        <div style="font-size:28px; margin-bottom:6px;">📁</div>
+        <div style="font-weight:600; font-size:13px;">Выберите или перетащите .SVG файл</div>
+        <div id="upload_filename_label" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Поддерживается векторный SVG</div>
+        <input type="file" id="upload_main_file_input" accept=".svg" style="display:none;" onchange="onFileSelected(this)">
+      </div>
+
+      <div>
+        <label style="font-size:12px; color:var(--text-muted);">Название компонента:</label>
+        <input type="text" id="upload_comp_name" class="search-input" placeholder="Например: ноутбук" style="margin-top:4px;">
+      </div>
+
+      <div>
+        <label style="font-size:12px; color:var(--text-muted);">Размер:</label>
+        <select id="upload_comp_size" class="control-select" style="width:100%; background:var(--bg-app); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px; margin-top:4px;">
+          <option value="L" selected>Размер L (Детальный)</option>
+          <option value="S">Размер S (Компактный)</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:12px; color:var(--text-muted);">Теги для семантики (через запятую):</label>
+        <input type="text" id="upload_comp_tags" class="search-input" placeholder="ноутбук, работа, компьютер, офис" style="margin-top:4px;">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Отмена</button>
+        <button class="btn btn-primary" onclick="submitComponentUpload()">Загрузить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Palette Modal -->
+  <div id="modal_upload_pal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">Загрузка цветовой палитры</span>
+        <button class="modal-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <div class="file-dropzone" onclick="document.getElementById('upload_pal_file_input').click()">
+        <div style="font-size:28px; margin-bottom:6px;">🎨</div>
+        <div style="font-weight:600; font-size:13px;">Выберите SVG файл палитры со свотчами</div>
+        <div id="upload_pal_filename_label" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Формат аналогичен цвета1.svg / цвета2.svg</div>
+        <input type="file" id="upload_pal_file_input" accept=".svg" style="display:none;" onchange="onPalFileSelected(this)">
+      </div>
+
+      <div>
+        <label style="font-size:12px; color:var(--text-muted);">Название новой схемы:</label>
+        <input type="text" id="upload_pal_name" class="search-input" placeholder="Например: Весенняя палитра" style="margin-top:4px;">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Отмена</button>
+        <button class="btn btn-primary" onclick="submitPaletteUpload()">Добавить палитру</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast_container" class="toast-container"></div>
+
+  <!-- Main JavaScript Application Logic -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
